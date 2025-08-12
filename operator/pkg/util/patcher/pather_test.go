@@ -27,6 +27,8 @@ import (
 
 	"github.com/karmada-io/karmada/operator/pkg/apis/operator/v1alpha1"
 	"github.com/karmada-io/karmada/operator/pkg/constants"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func TestPatchForDeployment(t *testing.T) {
@@ -814,80 +816,245 @@ func TestPatcherForService(t *testing.T) {
 
 // TestPatcherForSecret tests the Secret patching functionality
 func TestPatcherForSecret(t *testing.T) {
-	tests := []struct {
-		name    string
-		patcher *Patcher
-		secret  *corev1.Secret
-		want    *corev1.Secret
+	test := struct {
+		name           string
+		patcher        *Patcher
+		secret         *corev1.Secret
+		expectedLabels map[string]string
 	}{
-		{
-			name: "ForSecret_WithGlobalAndComponentLabels",
-			patcher: &Patcher{
-				globalLabels: map[string]string{
-					"environment": "production",
-					"security":    "high",
-				},
-				componentLabels: map[string]string{
-					"component": "karmada-webhook",
-				},
-				annotations: map[string]string{
-					"secret.kubernetes.io/allow-manual-inspection": "true",
-				},
+		name: "secret with global and component labels",
+		patcher: NewPatcher().
+			WithGlobalLabels(map[string]string{"env": "prod", "team": "platform"}).
+			WithComponentLabels(labels.Set{"component": "secret", "tier": "data"}).
+			WithComponentInfo("test-secret", "test-instance"),
+		secret: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-secret",
+				Namespace: "default",
+				Labels:    map[string]string{"existing": "label"},
 			},
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "test",
-					Labels: map[string]string{
-						"existing": "label",
-					},
-				},
-				Type: corev1.SecretTypeTLS,
-				Data: map[string][]byte{
-					"tls.crt": []byte("cert-data"),
-					"tls.key": []byte("key-data"),
-				},
-			},
-			want: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "test",
-					Labels: map[string]string{
-						"existing":    "label",
-						"environment": "production",
-						"security":    "high",
-						"component":   "karmada-webhook",
-					},
-					Annotations: map[string]string{
-						"secret.kubernetes.io/allow-manual-inspection": "true",
-					},
-				},
-				Type: corev1.SecretTypeTLS,
-				Data: map[string][]byte{
-					"tls.crt": []byte("cert-data"),
-					"tls.key": []byte("key-data"),
-				},
-			},
+		},
+		expectedLabels: map[string]string{
+			"existing":                     "label",
+			"env":                          "prod",
+			"team":                         "platform",
+			"component":                    "secret",
+			"tier":                         "data",
+			"app.kubernetes.io/managed-by": "karmada-operator",
+			"app.kubernetes.io/name":       "test-secret",
+			"app.kubernetes.io/instance":   "test-instance",
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			test.patcher.ForSecret(test.secret)
+	test.patcher.ForSecret(test.secret)
 
-			// Check that all expected labels are present
-			for key, value := range test.want.Labels {
-				if secretValue, exists := test.secret.Labels[key]; !exists || secretValue != value {
-					t.Errorf("expected label %s=%s, but got %s or doesn't exist", key, value, secretValue)
-				}
-			}
+	// Verify labels are correctly merged
+	for key, expectedValue := range test.expectedLabels {
+		if actualValue, exists := test.secret.Labels[key]; !exists || actualValue != expectedValue {
+			t.Errorf("Expected label %s=%s, but got %s", key, expectedValue, actualValue)
+		}
+	}
+}
 
-			// Check that all expected annotations are present
-			for key, value := range test.want.Annotations {
-				if secretValue, exists := test.secret.Annotations[key]; !exists || secretValue != value {
-					t.Errorf("expected annotation %s=%s, but got %s or doesn't exist", key, value, secretValue)
-				}
-			}
-		})
+func TestPatcherForServiceAccount(t *testing.T) {
+	test := struct {
+		name           string
+		patcher        *Patcher
+		serviceAccount *corev1.ServiceAccount
+		expectedLabels map[string]string
+	}{
+		name: "serviceaccount with global and component labels",
+		patcher: NewPatcher().
+			WithGlobalLabels(map[string]string{"env": "prod", "team": "platform"}).
+			WithComponentLabels(labels.Set{"component": "serviceaccount", "tier": "rbac"}).
+			WithComponentInfo("test-sa", "test-instance"),
+		serviceAccount: &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-sa",
+				Namespace: "default",
+				Labels:    map[string]string{"existing": "label"},
+			},
+		},
+		expectedLabels: map[string]string{
+			"existing":                     "label",
+			"env":                          "prod",
+			"team":                         "platform",
+			"component":                    "serviceaccount",
+			"tier":                         "rbac",
+			"app.kubernetes.io/managed-by": "karmada-operator",
+			"app.kubernetes.io/name":       "test-sa",
+			"app.kubernetes.io/instance":   "test-instance",
+		},
+	}
+
+	test.patcher.ForServiceAccount(test.serviceAccount)
+
+	// Verify labels are correctly merged
+	for key, expectedValue := range test.expectedLabels {
+		if actualValue, exists := test.serviceAccount.Labels[key]; !exists || actualValue != expectedValue {
+			t.Errorf("Expected label %s=%s, but got %s", key, expectedValue, actualValue)
+		}
+	}
+}
+
+func TestPatcherForClusterRole(t *testing.T) {
+	test := struct {
+		name           string
+		patcher        *Patcher
+		clusterRole    *rbacv1.ClusterRole
+		expectedLabels map[string]string
+	}{
+		name: "clusterrole with global and component labels",
+		patcher: NewPatcher().
+			WithGlobalLabels(map[string]string{"env": "prod", "team": "platform"}).
+			WithComponentLabels(labels.Set{"component": "clusterrole", "tier": "rbac"}).
+			WithComponentInfo("test-cr", "test-instance"),
+		clusterRole: &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "test-cr",
+				Labels: map[string]string{"existing": "label"},
+			},
+		},
+		expectedLabels: map[string]string{
+			"existing":                     "label",
+			"env":                          "prod",
+			"team":                         "platform",
+			"component":                    "clusterrole",
+			"tier":                         "rbac",
+			"app.kubernetes.io/managed-by": "karmada-operator",
+			"app.kubernetes.io/name":       "test-cr",
+			"app.kubernetes.io/instance":   "test-instance",
+		},
+	}
+
+	test.patcher.ForClusterRole(test.clusterRole)
+
+	// Verify labels are correctly merged
+	for key, expectedValue := range test.expectedLabels {
+		if actualValue, exists := test.clusterRole.Labels[key]; !exists || actualValue != expectedValue {
+			t.Errorf("Expected label %s=%s, but got %s", key, expectedValue, actualValue)
+		}
+	}
+}
+
+func TestPatcherForClusterRoleBinding(t *testing.T) {
+	test := struct {
+		name               string
+		patcher            *Patcher
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		expectedLabels     map[string]string
+	}{
+		name: "clusterrolebinding with global and component labels",
+		patcher: NewPatcher().
+			WithGlobalLabels(map[string]string{"env": "prod", "team": "platform"}).
+			WithComponentLabels(labels.Set{"component": "clusterrolebinding", "tier": "rbac"}).
+			WithComponentInfo("test-crb", "test-instance"),
+		clusterRoleBinding: &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "test-crb",
+				Labels: map[string]string{"existing": "label"},
+			},
+		},
+		expectedLabels: map[string]string{
+			"existing":                     "label",
+			"env":                          "prod",
+			"team":                         "platform",
+			"component":                    "clusterrolebinding",
+			"tier":                         "rbac",
+			"app.kubernetes.io/managed-by": "karmada-operator",
+			"app.kubernetes.io/name":       "test-crb",
+			"app.kubernetes.io/instance":   "test-instance",
+		},
+	}
+
+	test.patcher.ForClusterRoleBinding(test.clusterRoleBinding)
+
+	// Verify labels are correctly merged
+	for key, expectedValue := range test.expectedLabels {
+		if actualValue, exists := test.clusterRoleBinding.Labels[key]; !exists || actualValue != expectedValue {
+			t.Errorf("Expected label %s=%s, but got %s", key, expectedValue, actualValue)
+		}
+	}
+}
+
+func TestPatcherForRole(t *testing.T) {
+	test := struct {
+		name           string
+		patcher        *Patcher
+		role           *rbacv1.Role
+		expectedLabels map[string]string
+	}{
+		name: "role with global and component labels",
+		patcher: NewPatcher().
+			WithGlobalLabels(map[string]string{"env": "prod", "team": "platform"}).
+			WithComponentLabels(labels.Set{"component": "role", "tier": "rbac"}).
+			WithComponentInfo("test-role", "test-instance"),
+		role: &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-role",
+				Namespace: "default",
+				Labels:    map[string]string{"existing": "label"},
+			},
+		},
+		expectedLabels: map[string]string{
+			"existing":                     "label",
+			"env":                          "prod",
+			"team":                         "platform",
+			"component":                    "role",
+			"tier":                         "rbac",
+			"app.kubernetes.io/managed-by": "karmada-operator",
+			"app.kubernetes.io/name":       "test-role",
+			"app.kubernetes.io/instance":   "test-instance",
+		},
+	}
+
+	test.patcher.ForRole(test.role)
+
+	// Verify labels are correctly merged
+	for key, expectedValue := range test.expectedLabels {
+		if actualValue, exists := test.role.Labels[key]; !exists || actualValue != expectedValue {
+			t.Errorf("Expected label %s=%s, but got %s", key, expectedValue, actualValue)
+		}
+	}
+}
+
+func TestPatcherForRoleBinding(t *testing.T) {
+	test := struct {
+		name           string
+		patcher        *Patcher
+		roleBinding    *rbacv1.RoleBinding
+		expectedLabels map[string]string
+	}{
+		name: "rolebinding with global and component labels",
+		patcher: NewPatcher().
+			WithGlobalLabels(map[string]string{"env": "prod", "team": "platform"}).
+			WithComponentLabels(labels.Set{"component": "rolebinding", "tier": "rbac"}).
+			WithComponentInfo("test-rb", "test-instance"),
+		roleBinding: &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-rb",
+				Namespace: "default",
+				Labels:    map[string]string{"existing": "label"},
+			},
+		},
+		expectedLabels: map[string]string{
+			"existing":                     "label",
+			"env":                          "prod",
+			"team":                         "platform",
+			"component":                    "rolebinding",
+			"tier":                         "rbac",
+			"app.kubernetes.io/managed-by": "karmada-operator",
+			"app.kubernetes.io/name":       "test-rb",
+			"app.kubernetes.io/instance":   "test-instance",
+		},
+	}
+
+	test.patcher.ForRoleBinding(test.roleBinding)
+
+	// Verify labels are correctly merged
+	for key, expectedValue := range test.expectedLabels {
+		if actualValue, exists := test.roleBinding.Labels[key]; !exists || actualValue != expectedValue {
+			t.Errorf("Expected label %s=%s, but got %s", key, expectedValue, actualValue)
+		}
 	}
 }

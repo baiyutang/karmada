@@ -32,6 +32,7 @@ import (
 	operatorv1alpha1 "github.com/karmada-io/karmada/operator/pkg/apis/operator/v1alpha1"
 	"github.com/karmada-io/karmada/operator/pkg/constants"
 	"github.com/karmada-io/karmada/operator/pkg/util"
+	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 // Patcher defines multiple variables that need to be patched.
@@ -240,6 +241,51 @@ func (p *Patcher) ForSecret(secret *corev1.Secret) {
 	secret.Labels = mergedLabels
 
 	secret.Annotations = labels.Merge(secret.Annotations, p.annotations)
+}
+
+// ForServiceAccount patches the serviceaccount manifest with merged labels.
+func (p *Patcher) ForServiceAccount(serviceAccount *corev1.ServiceAccount) {
+	// Merge labels using the new label merging logic
+	mergedLabels := p.getMergedLabels(serviceAccount.Labels)
+	serviceAccount.Labels = mergedLabels
+
+	serviceAccount.Annotations = labels.Merge(serviceAccount.Annotations, p.annotations)
+}
+
+// ForClusterRole patches the clusterrole manifest with merged labels.
+func (p *Patcher) ForClusterRole(clusterRole *rbacv1.ClusterRole) {
+	// Merge labels using the new label merging logic
+	mergedLabels := p.getMergedLabels(clusterRole.Labels)
+	clusterRole.Labels = mergedLabels
+
+	clusterRole.Annotations = labels.Merge(clusterRole.Annotations, p.annotations)
+}
+
+// ForClusterRoleBinding patches the clusterrolebinding manifest with merged labels.
+func (p *Patcher) ForClusterRoleBinding(clusterRoleBinding *rbacv1.ClusterRoleBinding) {
+	// Merge labels using the new label merging logic
+	mergedLabels := p.getMergedLabels(clusterRoleBinding.Labels)
+	clusterRoleBinding.Labels = mergedLabels
+
+	clusterRoleBinding.Annotations = labels.Merge(clusterRoleBinding.Annotations, p.annotations)
+}
+
+// ForRole patches the role manifest with merged labels.
+func (p *Patcher) ForRole(role *rbacv1.Role) {
+	// Merge labels using the new label merging logic
+	mergedLabels := p.getMergedLabels(role.Labels)
+	role.Labels = mergedLabels
+
+	role.Annotations = labels.Merge(role.Annotations, p.annotations)
+}
+
+// ForRoleBinding patches the rolebinding manifest with merged labels.
+func (p *Patcher) ForRoleBinding(roleBinding *rbacv1.RoleBinding) {
+	// Merge labels using the new label merging logic
+	mergedLabels := p.getMergedLabels(roleBinding.Labels)
+	roleBinding.Labels = mergedLabels
+
+	roleBinding.Annotations = labels.Merge(roleBinding.Annotations, p.annotations)
 }
 
 func buildArgumentListFromMap(baseArguments, overrideArguments map[string]string) []string {
