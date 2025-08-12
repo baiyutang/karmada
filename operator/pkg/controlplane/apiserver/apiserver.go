@@ -34,23 +34,23 @@ import (
 )
 
 // EnsureKarmadaAPIServer creates karmada apiserver deployment and service resource
-func EnsureKarmadaAPIServer(client clientset.Interface, cfg *operatorv1alpha1.KarmadaComponents, name, namespace string, featureGates map[string]bool) error {
-	if err := installKarmadaAPIServer(client, cfg.KarmadaAPIServer, cfg.Etcd, name, namespace, featureGates); err != nil {
+func EnsureKarmadaAPIServer(client clientset.Interface, cfg *operatorv1alpha1.KarmadaComponents, name, namespace string, featureGates map[string]bool, globalLabels map[string]string) error {
+	if err := installKarmadaAPIServer(client, cfg.KarmadaAPIServer, cfg.Etcd, name, namespace, featureGates, globalLabels); err != nil {
 		return fmt.Errorf("failed to install karmada apiserver, err: %w", err)
 	}
 
-	return createKarmadaAPIServerService(client, cfg.KarmadaAPIServer, name, namespace)
+	return createKarmadaAPIServerService(client, cfg.KarmadaAPIServer, name, namespace, globalLabels)
 }
 
 // EnsureKarmadaAggregatedAPIServer creates karmada aggregated apiserver deployment and service resource
-func EnsureKarmadaAggregatedAPIServer(client clientset.Interface, cfg *operatorv1alpha1.KarmadaComponents, name, namespace string, featureGates map[string]bool) error {
-	if err := installKarmadaAggregatedAPIServer(client, cfg.KarmadaAggregatedAPIServer, cfg.Etcd, name, namespace, featureGates); err != nil {
+func EnsureKarmadaAggregatedAPIServer(client clientset.Interface, cfg *operatorv1alpha1.KarmadaComponents, name, namespace string, featureGates map[string]bool, globalLabels map[string]string) error {
+	if err := installKarmadaAggregatedAPIServer(client, cfg.KarmadaAggregatedAPIServer, cfg.Etcd, name, namespace, featureGates, globalLabels); err != nil {
 		return err
 	}
-	return createKarmadaAggregatedAPIServerService(client, name, namespace)
+	return createKarmadaAggregatedAPIServerService(client, name, namespace, globalLabels)
 }
 
-func installKarmadaAPIServer(client clientset.Interface, cfg *operatorv1alpha1.KarmadaAPIServer, etcdCfg *operatorv1alpha1.Etcd, name, namespace string, _ map[string]bool) error {
+func installKarmadaAPIServer(client clientset.Interface, cfg *operatorv1alpha1.KarmadaAPIServer, etcdCfg *operatorv1alpha1.Etcd, name, namespace string, _ map[string]bool, globalLabels map[string]string) error {
 	apiserverDeploymentBytes, err := util.ParseTemplate(KarmadaApiserverDeployment, struct {
 		KarmadaInstanceName, DeploymentName, Namespace, Image, ImagePullPolicy string
 		ServiceSubnet, KarmadaCertsSecret                                      string
@@ -79,7 +79,8 @@ func installKarmadaAPIServer(client clientset.Interface, cfg *operatorv1alpha1.K
 		return err
 	}
 
-	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithLabels(cfg.Labels).
+	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithComponentLabels(cfg.Labels).
+		WithGlobalLabels(globalLabels).WithComponentInfo("karmada-apiserver", name).
 		WithPriorityClassName(cfg.CommonSettings.PriorityClassName).
 		WithExtraArgs(cfg.ExtraArgs).WithExtraVolumeMounts(cfg.ExtraVolumeMounts).
 		WithExtraVolumes(cfg.ExtraVolumes).WithSidecarContainers(cfg.SidecarContainers).WithResources(cfg.Resources).ForDeployment(apiserverDeployment)
@@ -90,7 +91,7 @@ func installKarmadaAPIServer(client clientset.Interface, cfg *operatorv1alpha1.K
 	return nil
 }
 
-func createKarmadaAPIServerService(client clientset.Interface, cfg *operatorv1alpha1.KarmadaAPIServer, name, namespace string) error {
+func createKarmadaAPIServerService(client clientset.Interface, cfg *operatorv1alpha1.KarmadaAPIServer, name, namespace string, globalLabels map[string]string) error {
 	karmadaApiserverServiceBytes, err := util.ParseTemplate(KarmadaApiserverService, struct {
 		KarmadaInstanceName, ServiceName, Namespace, ServiceType string
 	}{
@@ -108,6 +109,10 @@ func createKarmadaAPIServerService(client clientset.Interface, cfg *operatorv1al
 		return fmt.Errorf("error when decoding karmadaApiserver serive: %w", err)
 	}
 
+	// Apply global and component labels to the service
+	patcher.NewPatcher().WithGlobalLabels(globalLabels).
+		WithComponentInfo("karmada-apiserver", name).ForService(karmadaApiserverService)
+
 	// merge annotations with configuration of karmada apiserver.
 	karmadaApiserverService.Annotations = labels.Merge(karmadaApiserverService.Annotations, cfg.ServiceAnnotations)
 
@@ -122,7 +127,7 @@ func createKarmadaAPIServerService(client clientset.Interface, cfg *operatorv1al
 	return nil
 }
 
-func installKarmadaAggregatedAPIServer(client clientset.Interface, cfg *operatorv1alpha1.KarmadaAggregatedAPIServer, etcdCfg *operatorv1alpha1.Etcd, name, namespace string, featureGates map[string]bool) error {
+func installKarmadaAggregatedAPIServer(client clientset.Interface, cfg *operatorv1alpha1.KarmadaAggregatedAPIServer, etcdCfg *operatorv1alpha1.Etcd, name, namespace string, featureGates map[string]bool, globalLabels map[string]string) error {
 	aggregatedAPIServerDeploymentBytes, err := util.ParseTemplate(KarmadaAggregatedAPIServerDeployment, struct {
 		KarmadaInstanceName, DeploymentName, Namespace, Image, ImagePullPolicy string
 		KubeconfigSecret, KarmadaCertsSecret                                   string
@@ -151,7 +156,8 @@ func installKarmadaAggregatedAPIServer(client clientset.Interface, cfg *operator
 		return err
 	}
 
-	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithLabels(cfg.Labels).
+	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithComponentLabels(cfg.Labels).
+		WithGlobalLabels(globalLabels).WithComponentInfo("karmada-aggregated-apiserver", name).
 		WithPriorityClassName(cfg.CommonSettings.PriorityClassName).
 		WithExtraArgs(cfg.ExtraArgs).WithFeatureGates(featureGates).WithResources(cfg.Resources).ForDeployment(aggregatedAPIServerDeployment)
 
@@ -161,7 +167,7 @@ func installKarmadaAggregatedAPIServer(client clientset.Interface, cfg *operator
 	return nil
 }
 
-func createKarmadaAggregatedAPIServerService(client clientset.Interface, name, namespace string) error {
+func createKarmadaAggregatedAPIServerService(client clientset.Interface, name, namespace string, globalLabels map[string]string) error {
 	aggregatedAPIServerServiceBytes, err := util.ParseTemplate(KarmadaAggregatedAPIServerService, struct {
 		KarmadaInstanceName, ServiceName, Namespace string
 	}{
@@ -177,6 +183,10 @@ func createKarmadaAggregatedAPIServerService(client clientset.Interface, name, n
 	if err := kuberuntime.DecodeInto(clientsetscheme.Codecs.UniversalDecoder(), aggregatedAPIServerServiceBytes, aggregatedAPIServerService); err != nil {
 		return fmt.Errorf("err when decoding karmadaAggregatedAPIServer serive: %w", err)
 	}
+
+	// Apply global and component labels to the service
+	patcher.NewPatcher().WithGlobalLabels(globalLabels).
+		WithComponentInfo("karmada-aggregated-apiserver", name).ForService(aggregatedAPIServerService)
 
 	if err := apiclient.CreateOrUpdateService(client, aggregatedAPIServerService); err != nil {
 		return fmt.Errorf("err when creating service for %s, err: %w", aggregatedAPIServerService.Name, err)

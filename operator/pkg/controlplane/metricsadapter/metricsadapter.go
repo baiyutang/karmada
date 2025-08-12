@@ -32,15 +32,15 @@ import (
 )
 
 // EnsureKarmadaMetricAdapter creates karmada-metric-adapter deployment and service resource.
-func EnsureKarmadaMetricAdapter(client clientset.Interface, cfg *operatorv1alpha1.KarmadaMetricsAdapter, name, namespace string) error {
-	if err := installKarmadaMetricAdapter(client, cfg, name, namespace); err != nil {
+func EnsureKarmadaMetricAdapter(client clientset.Interface, cfg *operatorv1alpha1.KarmadaMetricsAdapter, name, namespace string, globalLabels map[string]string) error {
+	if err := installKarmadaMetricAdapter(client, cfg, name, namespace, globalLabels); err != nil {
 		return err
 	}
 
-	return createKarmadaMetricAdapterService(client, name, namespace)
+	return createKarmadaMetricAdapterService(client, name, namespace, globalLabels)
 }
 
-func installKarmadaMetricAdapter(client clientset.Interface, cfg *operatorv1alpha1.KarmadaMetricsAdapter, name, namespace string) error {
+func installKarmadaMetricAdapter(client clientset.Interface, cfg *operatorv1alpha1.KarmadaMetricsAdapter, name, namespace string, globalLabels map[string]string) error {
 	metricAdapterBytes, err := util.ParseTemplate(KarmadaMetricsAdapterDeployment, struct {
 		KarmadaInstanceName, DeploymentName, Namespace, Image, ImagePullPolicy string
 		KubeconfigSecret, KarmadaCertsSecret                                   string
@@ -64,7 +64,9 @@ func installKarmadaMetricAdapter(client clientset.Interface, cfg *operatorv1alph
 		return fmt.Errorf("err when decoding KarmadaMetricAdapter Deployment: %w", err)
 	}
 
-	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithLabels(cfg.Labels).WithPriorityClassName(cfg.CommonSettings.PriorityClassName).
+	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithComponentLabels(cfg.Labels).
+		WithGlobalLabels(globalLabels).WithComponentInfo("karmada-metrics-adapter", name).
+		WithPriorityClassName(cfg.CommonSettings.PriorityClassName).
 		WithResources(cfg.Resources).ForDeployment(metricAdapter)
 
 	if err := apiclient.CreateOrUpdateDeployment(client, metricAdapter); err != nil {
@@ -73,7 +75,7 @@ func installKarmadaMetricAdapter(client clientset.Interface, cfg *operatorv1alph
 	return nil
 }
 
-func createKarmadaMetricAdapterService(client clientset.Interface, name, namespace string) error {
+func createKarmadaMetricAdapterService(client clientset.Interface, name, namespace string, globalLabels map[string]string) error {
 	metricAdapterServiceBytes, err := util.ParseTemplate(KarmadaMetricsAdapterService, struct {
 		KarmadaInstanceName, ServiceName, Namespace string
 	}{
@@ -89,6 +91,10 @@ func createKarmadaMetricAdapterService(client clientset.Interface, name, namespa
 	if err := kuberuntime.DecodeInto(clientsetscheme.Codecs.UniversalDecoder(), metricAdapterServiceBytes, metricAdapterService); err != nil {
 		return fmt.Errorf("err when decoding KarmadaMetricAdapter Service: %w", err)
 	}
+
+	// Apply global and component labels to the service
+	patcher.NewPatcher().WithGlobalLabels(globalLabels).
+		WithComponentInfo("karmada-metrics-adapter", name).ForService(metricAdapterService)
 
 	if err := apiclient.CreateOrUpdateService(client, metricAdapterService); err != nil {
 		return fmt.Errorf("err when creating service for %s, err: %w", metricAdapterService.Name, err)

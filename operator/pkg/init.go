@@ -90,6 +90,7 @@ type initData struct {
 	privateRegistry         string
 	featureGates            map[string]bool
 	components              *operatorv1alpha1.KarmadaComponents
+	globalLabels            map[string]string
 }
 
 // NewInitJob initializes a job with list of init sub-task. and build
@@ -178,6 +179,7 @@ func newRunData(opt *InitOptions) (*initData, error) {
 		privateRegistry:         privateRegistry,
 		components:              opt.Karmada.Spec.Components,
 		featureGates:            opt.Karmada.Spec.FeatureGates,
+		globalLabels:            opt.Karmada.Spec.GlobalLabels,
 		dnsDomain:               *opt.Karmada.Spec.HostCluster.Networking.DNSDomain,
 		CertStore:               certs.NewCertStore(),
 	}, nil
@@ -243,6 +245,10 @@ func (data *initData) ControlplaneAddress() string {
 
 func (data *initData) FeatureGates() map[string]bool {
 	return data.featureGates
+}
+
+func (data *initData) GlobalLabels() map[string]string {
+	return data.globalLabels
 }
 
 // NewJobInitOptions calls all of InitOpt func to initialize a InitOptions.

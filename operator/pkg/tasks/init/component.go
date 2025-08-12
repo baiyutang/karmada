@@ -86,6 +86,7 @@ func runComponentSubTask(component string) func(r workflow.RunData) error {
 			data.FeatureGates(),
 			data.RemoteClient(),
 			data.Components(),
+			data.GlobalLabels(),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to apply component %s, err: %w", component, err)
@@ -113,6 +114,7 @@ func runKarmadaWebhook(r workflow.RunData) error {
 		data.GetName(),
 		data.GetNamespace(),
 		data.FeatureGates(),
+		data.GlobalLabels(),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to apply karmada webhook, err: %w", err)
@@ -167,6 +169,7 @@ func runDeployMetricAdapter(r workflow.RunData) error {
 		cfg.KarmadaMetricsAdapter,
 		data.GetName(),
 		data.GetNamespace(),
+		data.GlobalLabels(),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to apply karmada-metrics-adapter, err: %w", err)
@@ -268,6 +271,7 @@ func runKarmadaSearch(r workflow.RunData) error {
 		data.GetName(),
 		data.GetNamespace(),
 		data.FeatureGates(),
+		data.GlobalLabels(),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to apply karmada search, err: %w", err)

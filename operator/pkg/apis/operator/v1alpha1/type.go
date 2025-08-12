@@ -91,6 +91,13 @@ type KarmadaSpec struct {
 	// +optional
 	PrivateRegistry *ImageRegistry `json:"privateRegistry,omitempty"`
 
+	// GlobalLabels define labels that should be applied to all resources managed by this Karmada instance.
+	// These labels will be merged with component-specific labels, with component-specific labels taking precedence
+	// in case of conflicts. This provides a consistent way to apply labels like ArgoCD application instance,
+	// environment identifiers, or any other organizational labels across all Karmada resources.
+	// +optional
+	GlobalLabels map[string]string `json:"globalLabels,omitempty"`
+
 	// Components define all of karmada components.
 	// not all of these components need to be installed.
 	// +optional

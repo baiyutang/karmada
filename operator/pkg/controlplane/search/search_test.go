@@ -58,7 +58,7 @@ func TestEnsureKarmadaSearch(t *testing.T) {
 	etcdCfg := &operatorv1alpha1.Etcd{
 		Local: &operatorv1alpha1.LocalEtcd{},
 	}
-	err := EnsureKarmadaSearch(fakeClient, cfg, etcdCfg, name, namespace, map[string]bool{})
+	err := EnsureKarmadaSearch(fakeClient, cfg, etcdCfg, name, namespace, map[string]bool{}, nil)
 	if err != nil {
 		t.Fatalf("failed to ensure karmada search, but got: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestInstallKarmadaSearch(t *testing.T) {
 	etcdCfg := &operatorv1alpha1.Etcd{
 		Local: &operatorv1alpha1.LocalEtcd{},
 	}
-	err := installKarmadaSearch(fakeClient, cfg, etcdCfg, name, namespace, map[string]bool{})
+	err := installKarmadaSearch(fakeClient, cfg, etcdCfg, name, namespace, map[string]bool{}, nil)
 	if err != nil {
 		t.Fatalf("failed to install karmada search: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestCreateKarmadaSearchService(t *testing.T) {
 	// Initialize fake clientset.
 	client := fakeclientset.NewSimpleClientset()
 
-	err := createKarmadaSearchService(client, name, namespace)
+	err := createKarmadaSearchService(client, name, namespace, nil)
 	if err != nil {
 		t.Fatalf("failed to create karmada search service")
 	}

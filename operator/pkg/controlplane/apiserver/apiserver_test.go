@@ -61,7 +61,7 @@ func TestEnsureKarmadaAPIServer(t *testing.T) {
 
 	fakeClient := fakeclientset.NewSimpleClientset()
 
-	err := EnsureKarmadaAPIServer(fakeClient, cfg, name, namespace, map[string]bool{})
+	err := EnsureKarmadaAPIServer(fakeClient, cfg, name, namespace, map[string]bool{}, nil)
 	if err != nil {
 		t.Fatalf("expected no error, but got: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestEnsureKarmadaAggregatedAPIServer(t *testing.T) {
 
 	fakeClient := fakeclientset.NewSimpleClientset()
 
-	err := EnsureKarmadaAggregatedAPIServer(fakeClient, cfg, name, namespace, featureGates)
+	err := EnsureKarmadaAggregatedAPIServer(fakeClient, cfg, name, namespace, featureGates, nil)
 	if err != nil {
 		t.Fatalf("expected no error, but got: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestInstallKarmadaAPIServer(t *testing.T) {
 	featureGates := map[string]bool{"FeatureA": true}
 
 	// Call the function under test.
-	err := installKarmadaAPIServer(fakeClient, cfg, etcdCfg, name, namespace, featureGates)
+	err := installKarmadaAPIServer(fakeClient, cfg, etcdCfg, name, namespace, featureGates, nil)
 	if err != nil {
 		t.Fatalf("expected no error, but got: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestCreateKarmadaAPIServerService(t *testing.T) {
 	}
 
 	// Call the function under test.
-	err := createKarmadaAPIServerService(client, cfg, name, namespace)
+	err := createKarmadaAPIServerService(client, cfg, name, namespace, nil)
 	if err != nil {
 		t.Fatalf("expected no error, but got: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestInstallKarmadaAggregatedAPIServer(t *testing.T) {
 	etcdCfg := &operatorv1alpha1.Etcd{
 		Local: &operatorv1alpha1.LocalEtcd{},
 	}
-	err := installKarmadaAggregatedAPIServer(fakeClient, cfg, etcdCfg, name, namespace, featureGates)
+	err := installKarmadaAggregatedAPIServer(fakeClient, cfg, etcdCfg, name, namespace, featureGates, nil)
 	if err != nil {
 		t.Fatalf("Failed to install Karmada Aggregated API Server: %v", err)
 	}
@@ -268,7 +268,7 @@ func TestCreateKarmadaAggregatedAPIServerService(t *testing.T) {
 	namespace := "test-namespace"
 
 	// Call the function under test.
-	err := createKarmadaAggregatedAPIServerService(client, name, namespace)
+	err := createKarmadaAggregatedAPIServerService(client, name, namespace, nil)
 	if err != nil {
 		t.Fatalf("expected no error, but got: %v", err)
 	}

@@ -40,4 +40,5 @@ type InitData interface {
 	KarmadaVersion() string
 	Components() *operatorv1alpha1.KarmadaComponents
 	FeatureGates() map[string]bool
+	GlobalLabels() map[string]string
 }

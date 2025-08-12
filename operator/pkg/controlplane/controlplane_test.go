@@ -104,7 +104,7 @@ func TestEnsureAllControlPlaneComponents(t *testing.T) {
 	}
 
 	for _, component := range components {
-		err := EnsureControlPlaneComponent(component, name, namespace, map[string]bool{}, fakeClient, cfg)
+		err := EnsureControlPlaneComponent(component, name, namespace, map[string]bool{}, fakeClient, cfg, nil)
 		if err != nil {
 			t.Fatalf("failed to ensure %s controlplane component: %v", component, err)
 		}
@@ -153,7 +153,7 @@ func TestGetKubeControllerManagerManifest(t *testing.T) {
 		ExtraArgs: extraArgs,
 	}
 
-	deployment, err := getKubeControllerManagerManifest(name, namespace, cfg)
+	deployment, err := getKubeControllerManagerManifest(name, namespace, cfg, nil)
 	if err != nil {
 		t.Fatalf("failed to get kube controller manager manifest: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestGetKarmadaControllerManagerManifest(t *testing.T) {
 
 	featureGates := map[string]bool{"FeatureA": true}
 
-	deployment, err := getKarmadaControllerManagerManifest(name, namespace, featureGates, cfg)
+	deployment, err := getKarmadaControllerManagerManifest(name, namespace, featureGates, cfg, nil)
 	if err != nil {
 		t.Fatalf("failed to get karmada controller manager manifest: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestGetKarmadaSchedulerManifest(t *testing.T) {
 
 	featureGates := map[string]bool{"FeatureA": true}
 
-	deployment, err := getKarmadaSchedulerManifest(name, namespace, featureGates, cfg)
+	deployment, err := getKarmadaSchedulerManifest(name, namespace, featureGates, cfg, nil)
 	if err != nil {
 		t.Fatalf("failed to get karmada scheduler manifest: %v", err)
 	}
@@ -322,7 +322,7 @@ func TestGetKarmadaDeschedulerManifest(t *testing.T) {
 
 	featureGates := map[string]bool{"FeatureA": true}
 
-	deployment, err := getKarmadaDeschedulerManifest(name, namespace, featureGates, cfg)
+	deployment, err := getKarmadaDeschedulerManifest(name, namespace, featureGates, cfg, nil)
 	if err != nil {
 		t.Fatalf("failed to get karmada descheduler manifest: %v", err)
 	}

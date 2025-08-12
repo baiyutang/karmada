@@ -31,20 +31,24 @@ import (
 
 	operatorv1alpha1 "github.com/karmada-io/karmada/operator/pkg/apis/operator/v1alpha1"
 	"github.com/karmada-io/karmada/operator/pkg/constants"
+	"github.com/karmada-io/karmada/operator/pkg/util"
 )
 
 // Patcher defines multiple variables that need to be patched.
 type Patcher struct {
-	priorityClassName string
-	labels            map[string]string
-	annotations       map[string]string
-	extraArgs         map[string]string
-	extraVolumes      []corev1.Volume
-	extraVolumeMounts []corev1.VolumeMount
-	sidecarContainers []corev1.Container
-	featureGates      map[string]bool
-	volume            *operatorv1alpha1.VolumeData
-	resources         corev1.ResourceRequirements
+	priorityClassName   string
+	globalLabels        map[string]string
+	componentLabels     map[string]string
+	annotations         map[string]string
+	extraArgs           map[string]string
+	extraVolumes        []corev1.Volume
+	extraVolumeMounts   []corev1.VolumeMount
+	sidecarContainers   []corev1.Container
+	featureGates        map[string]bool
+	volume              *operatorv1alpha1.VolumeData
+	resources           corev1.ResourceRequirements
+	componentName       string
+	karmadaInstanceName string
 }
 
 // NewPatcher returns a patcher.
@@ -52,9 +56,29 @@ func NewPatcher() *Patcher {
 	return &Patcher{}
 }
 
-// WithLabels sets labels to the patcher.
+// WithLabels sets component-specific labels to the patcher.
+// Deprecated: Use WithComponentLabels instead for better clarity.
 func (p *Patcher) WithLabels(labels labels.Set) *Patcher {
-	p.labels = labels
+	p.componentLabels = labels
+	return p
+}
+
+// WithComponentLabels sets component-specific labels to the patcher.
+func (p *Patcher) WithComponentLabels(labels labels.Set) *Patcher {
+	p.componentLabels = labels
+	return p
+}
+
+// WithGlobalLabels sets global labels to the patcher.
+func (p *Patcher) WithGlobalLabels(labels map[string]string) *Patcher {
+	p.globalLabels = labels
+	return p
+}
+
+// WithComponentInfo sets the component name and Karmada instance name for label generation.
+func (p *Patcher) WithComponentInfo(componentName, karmadaInstanceName string) *Patcher {
+	p.componentName = componentName
+	p.karmadaInstanceName = karmadaInstanceName
 	return p
 }
 
@@ -114,8 +138,10 @@ func (p *Patcher) WithResources(resources corev1.ResourceRequirements) *Patcher 
 
 // ForDeployment patches the deployment manifest.
 func (p *Patcher) ForDeployment(deployment *appsv1.Deployment) {
-	deployment.Labels = labels.Merge(deployment.Labels, p.labels)
-	deployment.Spec.Template.Labels = labels.Merge(deployment.Spec.Template.Labels, p.labels)
+	// Merge labels using the new label merging logic
+	mergedLabels := p.getMergedLabels(deployment.Labels)
+	deployment.Labels = mergedLabels
+	deployment.Spec.Template.Labels = util.MergeLabels(deployment.Spec.Template.Labels, p.globalLabels, p.componentLabels, p.getSystemLabels())
 
 	deployment.Annotations = labels.Merge(deployment.Annotations, p.annotations)
 	deployment.Spec.Template.Annotations = labels.Merge(deployment.Spec.Template.Annotations, p.annotations)
@@ -160,8 +186,10 @@ func (p *Patcher) ForDeployment(deployment *appsv1.Deployment) {
 
 // ForStatefulSet patches the statefulset manifest.
 func (p *Patcher) ForStatefulSet(sts *appsv1.StatefulSet) {
-	sts.Labels = labels.Merge(sts.Labels, p.labels)
-	sts.Spec.Template.Labels = labels.Merge(sts.Spec.Template.Labels, p.labels)
+	// Merge labels using the new label merging logic
+	mergedLabels := p.getMergedLabels(sts.Labels)
+	sts.Labels = mergedLabels
+	sts.Spec.Template.Labels = util.MergeLabels(sts.Spec.Template.Labels, p.globalLabels, p.componentLabels, p.getSystemLabels())
 
 	sts.Annotations = labels.Merge(sts.Annotations, p.annotations)
 	sts.Spec.Template.Annotations = labels.Merge(sts.Spec.Template.Annotations, p.annotations)
@@ -181,6 +209,37 @@ func (p *Patcher) ForStatefulSet(sts *appsv1.StatefulSet) {
 		argsMap := parseArgumentListToMap(baseArguments)
 		sts.Spec.Template.Spec.Containers[0].Command = buildArgumentListFromMap(argsMap, p.extraArgs)
 	}
+}
+
+// getMergedLabels merges all labels according to the priority order.
+func (p *Patcher) getMergedLabels(baseLabels map[string]string) map[string]string {
+	return util.MergeLabels(baseLabels, p.globalLabels, p.componentLabels, p.getSystemLabels())
+}
+
+// getSystemLabels returns system labels for the component.
+func (p *Patcher) getSystemLabels() map[string]string {
+	if p.componentName != "" && p.karmadaInstanceName != "" {
+		return util.GetComponentSystemLabels(p.componentName, p.karmadaInstanceName)
+	}
+	return util.GetSystemLabels()
+}
+
+// ForService patches the service manifest with merged labels.
+func (p *Patcher) ForService(service *corev1.Service) {
+	// Merge labels using the new label merging logic
+	mergedLabels := p.getMergedLabels(service.Labels)
+	service.Labels = mergedLabels
+
+	service.Annotations = labels.Merge(service.Annotations, p.annotations)
+}
+
+// ForSecret patches the secret manifest with merged labels.
+func (p *Patcher) ForSecret(secret *corev1.Secret) {
+	// Merge labels using the new label merging logic
+	mergedLabels := p.getMergedLabels(secret.Labels)
+	secret.Labels = mergedLabels
+
+	secret.Annotations = labels.Merge(secret.Annotations, p.annotations)
 }
 
 func buildArgumentListFromMap(baseArguments, overrideArguments map[string]string) []string {

@@ -191,7 +191,7 @@ func TestRunUploadAdminKubeconfig(t *testing.T) {
 				// particularly when the service type is set to NodePort.
 				data := rd.(*TestInitData)
 				client := data.RemoteClient()
-				if err := apiserver.EnsureKarmadaAPIServer(client, data.Components(), name, namespace, map[string]bool{}); err != nil {
+				if err := apiserver.EnsureKarmadaAPIServer(client, data.Components(), name, namespace, map[string]bool{}, nil); err != nil {
 					return fmt.Errorf("failed to install karmada api server: %v", err)
 				}
 

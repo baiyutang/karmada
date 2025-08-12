@@ -55,6 +55,7 @@ type TestInitData struct {
 	KarmadaVersionRelease   string
 	ComponentsUnits         *operatorv1alpha1.KarmadaComponents
 	FeatureGatesOptions     map[string]bool
+	GlobalLabelsConfig      map[string]string
 	RemoteClientConnector   clientset.Interface
 	KarmadaClientConnector  clientset.Interface
 	ControlplaneAddr        string
@@ -127,6 +128,11 @@ func (t *TestInitData) Components() *operatorv1alpha1.KarmadaComponents {
 // FeatureGates returns the feature gates enabled for the current installation.
 func (t *TestInitData) FeatureGates() map[string]bool {
 	return t.FeatureGatesOptions
+}
+
+// GlobalLabels returns the global labels for the current installation.
+func (t *TestInitData) GlobalLabels() map[string]string {
+	return t.GlobalLabelsConfig
 }
 
 // AddCert adds a Karmada certificate to the TestInitData.

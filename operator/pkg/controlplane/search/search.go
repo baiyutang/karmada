@@ -33,15 +33,15 @@ import (
 )
 
 // EnsureKarmadaSearch creates karmada search deployment and service resource.
-func EnsureKarmadaSearch(client clientset.Interface, cfg *operatorv1alpha1.KarmadaSearch, etcdCfg *operatorv1alpha1.Etcd, name, namespace string, featureGates map[string]bool) error {
-	if err := installKarmadaSearch(client, cfg, etcdCfg, name, namespace, featureGates); err != nil {
+func EnsureKarmadaSearch(client clientset.Interface, cfg *operatorv1alpha1.KarmadaSearch, etcdCfg *operatorv1alpha1.Etcd, name, namespace string, featureGates map[string]bool, globalLabels map[string]string) error {
+	if err := installKarmadaSearch(client, cfg, etcdCfg, name, namespace, featureGates, globalLabels); err != nil {
 		return err
 	}
 
-	return createKarmadaSearchService(client, name, namespace)
+	return createKarmadaSearchService(client, name, namespace, globalLabels)
 }
 
-func installKarmadaSearch(client clientset.Interface, cfg *operatorv1alpha1.KarmadaSearch, etcdCfg *operatorv1alpha1.Etcd, name, namespace string, _ map[string]bool) error {
+func installKarmadaSearch(client clientset.Interface, cfg *operatorv1alpha1.KarmadaSearch, etcdCfg *operatorv1alpha1.Etcd, name, namespace string, _ map[string]bool, globalLabels map[string]string) error {
 	searchDeploymentSetBytes, err := util.ParseTemplate(KarmadaSearchDeployment, struct {
 		KarmadaInstanceName, DeploymentName, Namespace, Image, ImagePullPolicy, KarmadaCertsSecret string
 		KubeconfigSecret                                                                           string
@@ -70,7 +70,8 @@ func installKarmadaSearch(client clientset.Interface, cfg *operatorv1alpha1.Karm
 		return err
 	}
 
-	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithLabels(cfg.Labels).
+	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithComponentLabels(cfg.Labels).
+		WithGlobalLabels(globalLabels).WithComponentInfo("karmada-search", name).
 		WithPriorityClassName(cfg.CommonSettings.PriorityClassName).
 		WithExtraArgs(cfg.ExtraArgs).WithResources(cfg.Resources).ForDeployment(searchDeployment)
 
@@ -80,7 +81,7 @@ func installKarmadaSearch(client clientset.Interface, cfg *operatorv1alpha1.Karm
 	return nil
 }
 
-func createKarmadaSearchService(client clientset.Interface, name, namespace string) error {
+func createKarmadaSearchService(client clientset.Interface, name, namespace string, globalLabels map[string]string) error {
 	searchServiceSetBytes, err := util.ParseTemplate(KarmadaSearchService, struct {
 		KarmadaInstanceName, ServiceName, Namespace string
 	}{
@@ -96,6 +97,10 @@ func createKarmadaSearchService(client clientset.Interface, name, namespace stri
 	if err := kuberuntime.DecodeInto(clientsetscheme.Codecs.UniversalDecoder(), searchServiceSetBytes, searchService); err != nil {
 		return fmt.Errorf("err when decoding KarmadaSearch Service: %w", err)
 	}
+
+	// Apply global and component labels to the service
+	patcher.NewPatcher().WithGlobalLabels(globalLabels).
+		WithComponentInfo("karmada-search", name).ForService(searchService)
 
 	if err := apiclient.CreateOrUpdateService(client, searchService); err != nil {
 		return fmt.Errorf("err when creating service for %s, err: %w", searchService.Name, err)

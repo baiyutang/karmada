@@ -58,7 +58,7 @@ func TestEnsureKarmadaMetricAdapter(t *testing.T) {
 	// Create fake clientset.
 	fakeClient := fakeclientset.NewSimpleClientset()
 
-	err := EnsureKarmadaMetricAdapter(fakeClient, cfg, name, namespace)
+	err := EnsureKarmadaMetricAdapter(fakeClient, cfg, name, namespace, nil)
 	if err != nil {
 		t.Fatalf("failed to ensure karmada metrics adapter, but got: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestInstallKarmadaMetricAdapter(t *testing.T) {
 	// Create fake clientset.
 	fakeClient := fakeclientset.NewSimpleClientset()
 
-	err := installKarmadaMetricAdapter(fakeClient, cfg, name, namespace)
+	err := installKarmadaMetricAdapter(fakeClient, cfg, name, namespace, nil)
 	if err != nil {
 		t.Fatalf("failed to install karmada metrics adapter: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestCreateKarmadaMetricAdapterService(t *testing.T) {
 	// Initialize fake clientset.
 	client := fakeclientset.NewSimpleClientset()
 
-	err := createKarmadaMetricAdapterService(client, name, namespace)
+	err := createKarmadaMetricAdapterService(client, name, namespace, nil)
 	if err != nil {
 		t.Fatalf("failed to create karmada metrics adapter service %v", err)
 	}

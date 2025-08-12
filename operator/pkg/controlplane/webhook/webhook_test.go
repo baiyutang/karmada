@@ -55,7 +55,7 @@ func TestEnsureKarmadaWebhook(t *testing.T) {
 	// Create fake clientset.
 	fakeClient := fakeclientset.NewSimpleClientset()
 
-	err := EnsureKarmadaWebhook(fakeClient, cfg, name, namespace, map[string]bool{})
+	err := EnsureKarmadaWebhook(fakeClient, cfg, name, namespace, map[string]bool{}, nil)
 	if err != nil {
 		t.Fatalf("failed to ensure karmada webhook, but got: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestInstallKarmadaWebhook(t *testing.T) {
 
 	featureGates := map[string]bool{"FeatureA": true}
 
-	err := installKarmadaWebhook(fakeClient, cfg, name, namespace, featureGates)
+	err := installKarmadaWebhook(fakeClient, cfg, name, namespace, featureGates, nil)
 	if err != nil {
 		t.Fatalf("failed to install karmada webhook: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestCreateKarmadaWebhookService(t *testing.T) {
 	// Initialize fake clientset.
 	client := fakeclientset.NewSimpleClientset()
 
-	err := createKarmadaWebhookService(client, name, namespace)
+	err := createKarmadaWebhookService(client, name, namespace, nil)
 	if err != nil {
 		t.Fatalf("failed to create karmada webhook service")
 	}

@@ -32,15 +32,15 @@ import (
 )
 
 // EnsureKarmadaWebhook creates karmada webhook deployment and service resource.
-func EnsureKarmadaWebhook(client clientset.Interface, cfg *operatorv1alpha1.KarmadaWebhook, name, namespace string, featureGates map[string]bool) error {
-	if err := installKarmadaWebhook(client, cfg, name, namespace, featureGates); err != nil {
+func EnsureKarmadaWebhook(client clientset.Interface, cfg *operatorv1alpha1.KarmadaWebhook, name, namespace string, featureGates map[string]bool, globalLabels map[string]string) error {
+	if err := installKarmadaWebhook(client, cfg, name, namespace, featureGates, globalLabels); err != nil {
 		return err
 	}
 
-	return createKarmadaWebhookService(client, name, namespace)
+	return createKarmadaWebhookService(client, name, namespace, globalLabels)
 }
 
-func installKarmadaWebhook(client clientset.Interface, cfg *operatorv1alpha1.KarmadaWebhook, name, namespace string, featureGates map[string]bool) error {
+func installKarmadaWebhook(client clientset.Interface, cfg *operatorv1alpha1.KarmadaWebhook, name, namespace string, featureGates map[string]bool, globalLabels map[string]string) error {
 	webhookDeploymentSetBytes, err := util.ParseTemplate(KarmadaWebhookDeployment, struct {
 		KarmadaInstanceName, DeploymentName, Namespace, Image, ImagePullPolicy string
 		KubeconfigSecret, WebhookCertsSecret                                   string
@@ -64,7 +64,8 @@ func installKarmadaWebhook(client clientset.Interface, cfg *operatorv1alpha1.Kar
 		return fmt.Errorf("err when decoding KarmadaWebhook Deployment: %w", err)
 	}
 
-	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithLabels(cfg.Labels).
+	patcher.NewPatcher().WithAnnotations(cfg.Annotations).WithComponentLabels(cfg.Labels).
+		WithGlobalLabels(globalLabels).WithComponentInfo("karmada-webhook", name).
 		WithPriorityClassName(cfg.CommonSettings.PriorityClassName).
 		WithExtraArgs(cfg.ExtraArgs).WithFeatureGates(featureGates).WithResources(cfg.Resources).ForDeployment(webhookDeployment)
 
@@ -74,7 +75,7 @@ func installKarmadaWebhook(client clientset.Interface, cfg *operatorv1alpha1.Kar
 	return nil
 }
 
-func createKarmadaWebhookService(client clientset.Interface, name, namespace string) error {
+func createKarmadaWebhookService(client clientset.Interface, name, namespace string, globalLabels map[string]string) error {
 	webhookServiceSetBytes, err := util.ParseTemplate(KarmadaWebhookService, struct {
 		KarmadaInstanceName, ServiceName, Namespace string
 	}{
@@ -90,6 +91,10 @@ func createKarmadaWebhookService(client clientset.Interface, name, namespace str
 	if err := kuberuntime.DecodeInto(clientsetscheme.Codecs.UniversalDecoder(), webhookServiceSetBytes, webhookService); err != nil {
 		return fmt.Errorf("err when decoding KarmadaWebhook Service: %w", err)
 	}
+
+	// Apply global and component labels to the service
+	patcher.NewPatcher().WithGlobalLabels(globalLabels).
+		WithComponentInfo("karmada-webhook", name).ForService(webhookService)
 
 	if err := apiclient.CreateOrUpdateService(client, webhookService); err != nil {
 		return fmt.Errorf("err when creating service for %s, err: %w", webhookService.Name, err)
