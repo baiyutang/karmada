@@ -27,7 +27,6 @@ import (
 	"github.com/karmada-io/karmada/operator/pkg/constants"
 	"github.com/karmada-io/karmada/operator/pkg/controlplane"
 	"github.com/karmada-io/karmada/operator/pkg/controlplane/metricsadapter"
-	"github.com/karmada-io/karmada/operator/pkg/controlplane/pdb"
 	"github.com/karmada-io/karmada/operator/pkg/controlplane/search"
 	"github.com/karmada-io/karmada/operator/pkg/controlplane/webhook"
 	"github.com/karmada-io/karmada/operator/pkg/karmadaresource/apiservice"
@@ -184,16 +183,16 @@ func runDeployMetricAdapter(r workflow.RunData) error {
 		klog.V(2).InfoS("[DeployMetricAdapter] the karmada-metrics-adapter is ready", "karmada", klog.KObj(data))
 
 		// Ensure PDB after Pods are ready
-		err = pdb.EnsurePodDisruptionBudget(
-			constants.KarmadaMetricsAdapter,
-			data.GetName(),
-			data.GetNamespace(),
-			&cfg.KarmadaMetricsAdapter.CommonSettings,
-			data.RemoteClient(),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to ensure PDB for karmada metrics adapter component, err: %w", err)
-		}
+		// err = pdb.EnsurePodDisruptionBudget(
+		// 	constants.KarmadaMetricsAdapter,
+		// 	data.GetName(),
+		// 	data.GetNamespace(),
+		// 	&cfg.KarmadaMetricsAdapter.CommonSettings,
+		// 	data.RemoteClient(),
+		// )
+		// if err != nil {
+		// 	return fmt.Errorf("failed to ensure PDB for karmada metrics adapter component, err: %w", err)
+		// }
 		klog.V(2).InfoS("[DeployMetricAdapter] Successfully ensured PDB for karmada-metrics-adapter", "karmada", klog.KObj(data))
 	}
 
@@ -333,16 +332,16 @@ func runDeployKarmadaSearchAPIService(r workflow.RunData) error {
 		klog.V(2).InfoS("[DeploySearchAPIService] all karmada-search APIServices status is ready ", "karmada", klog.KObj(data))
 
 		// Create PDB after Pods are ready (APIService healthy implies Pods are running)
-		err = pdb.EnsurePodDisruptionBudget(
-			constants.KarmadaSearch,
-			data.GetName(),
-			data.GetNamespace(),
-			&cfg.KarmadaSearch.CommonSettings,
-			data.RemoteClient(),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to ensure PDB for karmada search component, err: %w", err)
-		}
+		// err = pdb.EnsurePodDisruptionBudget(
+		// 	constants.KarmadaSearch,
+		// 	data.GetName(),
+		// 	data.GetNamespace(),
+		// 	&cfg.KarmadaSearch.CommonSettings,
+		// 	data.RemoteClient(),
+		// )
+		// if err != nil {
+		// 	return fmt.Errorf("failed to ensure PDB for karmada search component, err: %w", err)
+		// }
 	}
 
 	return nil

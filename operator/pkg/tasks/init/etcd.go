@@ -22,9 +22,7 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"github.com/karmada-io/karmada/operator/pkg/constants"
 	"github.com/karmada-io/karmada/operator/pkg/controlplane/etcd"
-	"github.com/karmada-io/karmada/operator/pkg/controlplane/pdb"
 	"github.com/karmada-io/karmada/operator/pkg/util/apiclient"
 	"github.com/karmada-io/karmada/operator/pkg/workflow"
 )
@@ -96,20 +94,20 @@ func runWaitEtcd(r workflow.RunData) error {
 	klog.V(2).InfoS("[wait-etcd] the etcd pods is ready", "karmada", klog.KObj(data))
 
 	// Ensure PDB after Pods are ready
-	cfg := data.Components()
-	if cfg != nil && cfg.Etcd.Local != nil {
-		err := pdb.EnsurePodDisruptionBudget(
-			constants.Etcd,
-			data.GetName(),
-			data.GetNamespace(),
-			&cfg.Etcd.Local.CommonSettings,
-			data.RemoteClient(),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to ensure PDB for etcd component, err: %w", err)
-		}
-		klog.V(2).InfoS("[wait-etcd] Successfully ensured PDB for etcd", "karmada", klog.KObj(data))
-	}
+	// cfg := data.Components()
+	// if cfg != nil && cfg.Etcd.Local != nil {
+	// 	err := pdb.EnsurePodDisruptionBudget(
+	// 		constants.Etcd,
+	// 		data.GetName(),
+	// 		data.GetNamespace(),
+	// 		&cfg.Etcd.Local.CommonSettings,
+	// 		data.RemoteClient(),
+	// 	)
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to ensure PDB for etcd component, err: %w", err)
+	// 	}
+	// 	klog.V(2).InfoS("[wait-etcd] Successfully ensured PDB for etcd", "karmada", klog.KObj(data))
+	// }
 
 	return nil
 }
