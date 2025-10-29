@@ -65,7 +65,7 @@ func runDeployEtcd(r workflow.RunData) error {
 	}
 
 	cfg := data.Components()
-	if cfg.Etcd.External != nil {
+	if cfg == nil || cfg.Etcd.External != nil {
 		klog.V(2).InfoS("[etcd] use external etcd, skip install etcd job", "karmada", data.GetName())
 		return nil
 	}

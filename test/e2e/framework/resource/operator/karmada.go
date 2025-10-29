@@ -42,9 +42,15 @@ func WaitKarmadaReady(client operator.Interface, namespace, name string, lastTra
 		gomega.Eventually(func(g gomega.Gomega) bool {
 			karmada, err := client.OperatorV1alpha1().Karmadas(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 			g.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Log status conditions for debugging
 			for _, condition := range karmada.Status.Conditions {
-				if condition.Type == "Ready" && condition.Status == "True" && condition.LastTransitionTime.After(lastTransitionTime) {
-					return true
+				if condition.Type == "Ready" {
+					klog.V(4).Infof("Karmada %s/%s Ready condition: Status=%s, Reason=%s, Message=%s, LastTransitionTime=%v",
+						namespace, name, condition.Status, condition.Reason, condition.Message, condition.LastTransitionTime)
+					if condition.Status == "True" && condition.LastTransitionTime.After(lastTransitionTime) {
+						return true
+					}
 				}
 			}
 			return false
