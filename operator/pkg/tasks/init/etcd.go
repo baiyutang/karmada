@@ -97,7 +97,7 @@ func runWaitEtcd(r workflow.RunData) error {
 
 	// Ensure PDB after Pods are ready
 	cfg := data.Components()
-	if cfg.Etcd.Local != nil {
+	if cfg != nil && cfg.Etcd.Local != nil {
 		err := pdb.EnsurePodDisruptionBudget(
 			constants.Etcd,
 			data.GetName(),

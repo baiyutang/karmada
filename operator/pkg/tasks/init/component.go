@@ -158,7 +158,7 @@ func runDeployMetricAdapter(r workflow.RunData) error {
 	}
 
 	cfg := data.Components()
-	if cfg.KarmadaMetricsAdapter == nil {
+	if cfg == nil || cfg.KarmadaMetricsAdapter == nil {
 		klog.V(2).InfoS("[karmadaMetricsAdapter] Skip install karmada-metrics-adapter component")
 		return nil
 	}
@@ -207,7 +207,7 @@ func runDeployMetricAdapterAPIService(r workflow.RunData) error {
 	}
 
 	cfg := data.Components()
-	if cfg.KarmadaMetricsAdapter == nil {
+	if cfg == nil || cfg.KarmadaMetricsAdapter == nil {
 		klog.V(2).InfoS("[karmadaMetricsAdapter] Skip install karmada-metrics-adapter APIService")
 		return nil
 	}
@@ -270,7 +270,7 @@ func runKarmadaSearch(r workflow.RunData) error {
 	}
 
 	cfg := data.Components()
-	if cfg.KarmadaSearch == nil {
+	if cfg == nil || cfg.KarmadaSearch == nil {
 		klog.Infof("Skip installing component (%s/%s)", data.GetNamespace(), constants.KarmadaSearchComponent)
 		return nil
 	}
@@ -298,7 +298,7 @@ func runDeployKarmadaSearchAPIService(r workflow.RunData) error {
 	}
 
 	cfg := data.Components()
-	if cfg.KarmadaSearch == nil {
+	if cfg == nil || cfg.KarmadaSearch == nil {
 		klog.V(2).InfoS("[karmadaSearch] Skip install karmada-search APIService")
 		return nil
 	}

@@ -131,7 +131,7 @@ func runWaitKarmadaAPIServer(r workflow.RunData) error {
 
 	// Ensure PDB after Pods are ready
 	cfg := data.Components()
-	if cfg.KarmadaAPIServer != nil {
+	if cfg != nil && cfg.KarmadaAPIServer != nil {
 		err = pdb.EnsurePodDisruptionBudget(
 			constants.KarmadaAPIServer,
 			data.GetName(),
@@ -191,7 +191,7 @@ func runWaitKarmadaAggregatedAPIServer(r workflow.RunData) error {
 
 	// Ensure PDB after Pods are ready
 	cfg := data.Components()
-	if cfg.KarmadaAggregatedAPIServer != nil {
+	if cfg != nil && cfg.KarmadaAggregatedAPIServer != nil {
 		err = pdb.EnsurePodDisruptionBudget(
 			constants.KarmadaAggregatedAPIServer,
 			data.GetName(),
