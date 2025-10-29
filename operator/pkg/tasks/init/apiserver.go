@@ -110,17 +110,6 @@ func runKarmadaAPIServer(r workflow.RunData) error {
 		return fmt.Errorf("failed to install karmada apiserver component, err: %w", err)
 	}
 
-	err = pdb.EnsurePodDisruptionBudget(
-		constants.KarmadaAPIServer,
-		data.GetName(),
-		data.GetNamespace(),
-		&cfg.KarmadaAPIServer.CommonSettings,
-		data.RemoteClient(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to ensure PDB for karmada apiserver component, err: %w", err)
-	}
-
 	klog.V(2).InfoS("[KarmadaApiserver] Successfully installed karmada-apiserver component", "karmada", klog.KObj(data))
 	return nil
 }
@@ -139,6 +128,23 @@ func runWaitKarmadaAPIServer(r workflow.RunData) error {
 	}
 
 	klog.V(2).InfoS("[wait-KarmadaAPIServer] the karmada-apiserver is ready", "karmada", klog.KObj(data))
+
+	// Ensure PDB after Pods are ready
+	cfg := data.Components()
+	if cfg.KarmadaAPIServer != nil {
+		err = pdb.EnsurePodDisruptionBudget(
+			constants.KarmadaAPIServer,
+			data.GetName(),
+			data.GetNamespace(),
+			&cfg.KarmadaAPIServer.CommonSettings,
+			data.RemoteClient(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to ensure PDB for karmada apiserver component, err: %w", err)
+		}
+		klog.V(2).InfoS("[wait-KarmadaAPIServer] Successfully ensured PDB for karmada-apiserver", "karmada", klog.KObj(data))
+	}
+
 	return nil
 }
 
@@ -164,17 +170,6 @@ func runKarmadaAggregatedAPIServer(r workflow.RunData) error {
 		return fmt.Errorf("failed to install karmada aggregated apiserver, err: %w", err)
 	}
 
-	err = pdb.EnsurePodDisruptionBudget(
-		constants.KarmadaAggregatedAPIServer,
-		data.GetName(),
-		data.GetNamespace(),
-		&cfg.KarmadaAggregatedAPIServer.CommonSettings,
-		data.RemoteClient(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to ensure PDB for karmada aggregated apiserver component, err: %w", err)
-	}
-
 	klog.V(2).InfoS("[KarmadaAggregatedApiserver] Successfully installed karmada-aggregated-apiserver component", "karmada", klog.KObj(data))
 	return nil
 }
@@ -193,5 +188,22 @@ func runWaitKarmadaAggregatedAPIServer(r workflow.RunData) error {
 	}
 
 	klog.V(2).InfoS("[wait-KarmadaAggregatedAPIServer] the karmada-aggregated-apiserver is ready", "karmada", klog.KObj(data))
+
+	// Ensure PDB after Pods are ready
+	cfg := data.Components()
+	if cfg.KarmadaAggregatedAPIServer != nil {
+		err = pdb.EnsurePodDisruptionBudget(
+			constants.KarmadaAggregatedAPIServer,
+			data.GetName(),
+			data.GetNamespace(),
+			&cfg.KarmadaAggregatedAPIServer.CommonSettings,
+			data.RemoteClient(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to ensure PDB for karmada aggregated apiserver component, err: %w", err)
+		}
+		klog.V(2).InfoS("[wait-KarmadaAggregatedAPIServer] Successfully ensured PDB for karmada-aggregated-apiserver", "karmada", klog.KObj(data))
+	}
+
 	return nil
 }

@@ -119,17 +119,6 @@ func runKarmadaWebhook(r workflow.RunData) error {
 		return fmt.Errorf("failed to apply karmada webhook, err: %w", err)
 	}
 
-	err = pdb.EnsurePodDisruptionBudget(
-		constants.KarmadaWebhook,
-		data.GetName(),
-		data.GetNamespace(),
-		&cfg.KarmadaWebhook.CommonSettings,
-		data.RemoteClient(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to ensure PDB for karmada webhook component, err: %w", err)
-	}
-
 	klog.V(2).InfoS("[KarmadaWebhook] Successfully applied karmada webhook component", "karmada", klog.KObj(data))
 	return nil
 }
@@ -184,17 +173,6 @@ func runDeployMetricAdapter(r workflow.RunData) error {
 		return fmt.Errorf("failed to apply karmada-metrics-adapter, err: %w", err)
 	}
 
-	err = pdb.EnsurePodDisruptionBudget(
-		constants.KarmadaMetricsAdapter,
-		data.GetName(),
-		data.GetNamespace(),
-		&cfg.KarmadaMetricsAdapter.CommonSettings,
-		data.RemoteClient(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to ensure PDB for karmada metrics adapter component, err: %w", err)
-	}
-
 	klog.V(2).InfoS("[DeployMetricAdapter] Successfully applied karmada-metrics-adapter component", "karmada", klog.KObj(data))
 
 	if *cfg.KarmadaMetricsAdapter.Replicas != 0 {
@@ -204,6 +182,19 @@ func runDeployMetricAdapter(r workflow.RunData) error {
 		}
 
 		klog.V(2).InfoS("[DeployMetricAdapter] the karmada-metrics-adapter is ready", "karmada", klog.KObj(data))
+
+		// Ensure PDB after Pods are ready
+		err = pdb.EnsurePodDisruptionBudget(
+			constants.KarmadaMetricsAdapter,
+			data.GetName(),
+			data.GetNamespace(),
+			&cfg.KarmadaMetricsAdapter.CommonSettings,
+			data.RemoteClient(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to ensure PDB for karmada metrics adapter component, err: %w", err)
+		}
+		klog.V(2).InfoS("[DeployMetricAdapter] Successfully ensured PDB for karmada-metrics-adapter", "karmada", klog.KObj(data))
 	}
 
 	return nil
@@ -296,17 +287,6 @@ func runKarmadaSearch(r workflow.RunData) error {
 		return fmt.Errorf("failed to apply karmada search, err: %w", err)
 	}
 
-	err = pdb.EnsurePodDisruptionBudget(
-		constants.KarmadaSearch,
-		data.GetName(),
-		data.GetNamespace(),
-		&cfg.KarmadaSearch.CommonSettings,
-		data.RemoteClient(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to ensure PDB for karmada search component, err: %w", err)
-	}
-
 	klog.V(2).InfoS("[KarmadaSearch] Successfully applied karmada search component", "karmada", klog.KObj(data))
 	return nil
 }
@@ -351,6 +331,18 @@ func runDeployKarmadaSearchAPIService(r workflow.RunData) error {
 		}
 
 		klog.V(2).InfoS("[DeploySearchAPIService] all karmada-search APIServices status is ready ", "karmada", klog.KObj(data))
+
+		// Create PDB after Pods are ready (APIService healthy implies Pods are running)
+		err = pdb.EnsurePodDisruptionBudget(
+			constants.KarmadaSearch,
+			data.GetName(),
+			data.GetNamespace(),
+			&cfg.KarmadaSearch.CommonSettings,
+			data.RemoteClient(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to ensure PDB for karmada search component, err: %w", err)
+		}
 	}
 
 	return nil

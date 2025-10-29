@@ -75,17 +75,6 @@ func runDeployEtcd(r workflow.RunData) error {
 		return fmt.Errorf("failed to install etcd component, err: %w", err)
 	}
 
-	err = pdb.EnsurePodDisruptionBudget(
-		constants.Etcd,
-		data.GetName(),
-		data.GetNamespace(),
-		&cfg.Etcd.Local.CommonSettings,
-		data.RemoteClient(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to ensure PDB for etcd component, err: %w", err)
-	}
-
 	klog.V(2).InfoS("[deploy-etcd] Successfully installed etcd component", "karmada", klog.KObj(data))
 	return nil
 }
@@ -105,5 +94,22 @@ func runWaitEtcd(r workflow.RunData) error {
 	}
 
 	klog.V(2).InfoS("[wait-etcd] the etcd pods is ready", "karmada", klog.KObj(data))
+
+	// Ensure PDB after Pods are ready
+	cfg := data.Components()
+	if cfg.Etcd.Local != nil {
+		err := pdb.EnsurePodDisruptionBudget(
+			constants.Etcd,
+			data.GetName(),
+			data.GetNamespace(),
+			&cfg.Etcd.Local.CommonSettings,
+			data.RemoteClient(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to ensure PDB for etcd component, err: %w", err)
+		}
+		klog.V(2).InfoS("[wait-etcd] Successfully ensured PDB for etcd", "karmada", klog.KObj(data))
+	}
+
 	return nil
 }
