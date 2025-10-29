@@ -33,8 +33,10 @@ import (
 
 // EnsurePodDisruptionBudget ensures that a PodDisruptionBudget exists for the component
 func EnsurePodDisruptionBudget(component, name, namespace string, commonSettings *operatorv1alpha1.CommonSettings, client clientset.Interface) error {
-	if commonSettings == nil || commonSettings.PodDisruptionBudgetConfig == nil {
-		// If no PDB config is specified, ensure any existing PDB is deleted
+	needDelete := (commonSettings == nil || commonSettings.PodDisruptionBudgetConfig == nil) ||
+		(commonSettings.PodDisruptionBudgetConfig.MinAvailable == nil && commonSettings.PodDisruptionBudgetConfig.MaxUnavailable == nil)
+
+	if needDelete {
 		pdbName := getPDBName(name, component)
 		if err := deletePodDisruptionBudget(client, namespace, pdbName); err != nil {
 			return fmt.Errorf("failed to delete existing PDB for component %s, err: %w", component, err)
